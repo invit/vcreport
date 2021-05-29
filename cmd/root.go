@@ -14,12 +14,14 @@ import (
 	"github.com/spf13/cobra"
 )
 
+// Pod describes the location where an image is used
 type Pod struct {
 	Namespace string `json:"namespace"`
 	Pod       string `json:"pod"`
 	Container string `json:"container"`
 }
 
+// Image is the image version info and its pods
 type Image struct {
 	Image          string `json:"image"`
 	CurrentVersion string `json:"current_version"`
@@ -28,6 +30,7 @@ type Image struct {
 	Pods           []Pod  `json:"pods"`
 }
 
+// Version returns a formatted image version
 func (i *Image) Version() string {
 	if i.IsLatest {
 		return fmt.Sprintf("%s (Up to date)", i.CurrentVersion)
@@ -36,6 +39,7 @@ func (i *Image) Version() string {
 	return fmt.Sprintf("%s > %s", i.CurrentVersion, i.LatestVersion)
 }
 
+// AddPod adds a new pod to the list
 func (i *Image) AddPod(p Pod) {
 	i.Pods = append(i.Pods, p)
 }
@@ -113,7 +117,7 @@ var rootCmd = &cobra.Command{
 
 			var keys = []string{}
 
-			for k, _ := range images {
+			for k := range images {
 				keys = append(keys, k)
 			}
 
