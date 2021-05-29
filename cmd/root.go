@@ -24,7 +24,16 @@ type Image struct {
 	Image          string `json:"image"`
 	CurrentVersion string `json:"current_version"`
 	LatestVersion  string `json:"latest_version"`
+	IsLatest       bool   `json:"is_latest"`
 	Pods           []Pod  `json:"pods"`
+}
+
+func (i *Image) Version() string {
+	if i.IsLatest {
+		return fmt.Sprintf("%s (Up to date)", i.CurrentVersion)
+	}
+
+	return fmt.Sprintf("%s > %s", i.CurrentVersion, i.LatestVersion)
 }
 
 func (i *Image) AddPod(p Pod) {
@@ -66,12 +75,13 @@ var rootCmd = &cobra.Command{
 			for _, v := range mf {
 				for _, m := range v.Metric {
 					labels := map[string]string{}
+					latest := *m.Gauge.Value > 0
 
 					for _, l := range m.Label {
 						labels[l.GetName()] = l.GetValue()
 					}
 
-					if !displayAll && labels["current_version"] == labels["latest_version"] {
+					if !displayAll && latest {
 						continue
 					}
 
@@ -82,6 +92,7 @@ var rootCmd = &cobra.Command{
 							Image:          labels["image"],
 							CurrentVersion: labels["current_version"],
 							LatestVersion:  labels["latest_version"],
+							IsLatest:       latest,
 							Pods: []Pod{{
 								Namespace: labels["namespace"],
 								Pod:       labels["pod"],
@@ -111,21 +122,19 @@ var rootCmd = &cobra.Command{
 			table := tablewriter.NewWriter(os.Stdout)
 			table.SetAlignment(tablewriter.ALIGN_LEFT)
 			table.SetRowLine(true)
-			//table.SetRowSeparator("-")
 
 			if displayBrief {
-				table.SetHeader([]string{"Image", "Current", "Latest"})
+				table.SetHeader([]string{"Image", "Version"})
 
 				for _, k := range keys {
 					table.Append([]string{
 						images[k].Image,
-						images[k].CurrentVersion,
-						images[k].LatestVersion,
+						images[k].Version(),
 					})
 				}
 
 			} else {
-				table.SetHeader([]string{"Image", "Current", "Latest", "Pods"})
+				table.SetHeader([]string{"Image", "Version", "Pods"})
 
 				for _, k := range keys {
 					pods := []string{}
@@ -139,8 +148,7 @@ var rootCmd = &cobra.Command{
 
 					table.Append([]string{
 						images[k].Image,
-						images[k].CurrentVersion,
-						images[k].LatestVersion,
+						images[k].Version(),
 						strings.Join(pods, "\n"),
 					})
 				}
